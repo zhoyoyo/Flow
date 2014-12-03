@@ -1,0 +1,187 @@
+<html>
+<head>
+	<script type="text/javascript" src='js/jquery-1.11.1.min.js'></script>
+	<script type="text/javascript" src='js/underscore.min.js'></script>
+	<script type="text/javascript" src='js/d3.min.js'></script>
+	<script type="text/javascript" src='js/main.js'></script>
+	<title>International Students in the U.S.</title>
+	<link rel="stylesheet" type="text/css" href="css/style.css">
+
+
+<script>
+
+ $(function(){
+        
+    var width = window.innerWidth-10,
+    	height = width*.518-20;
+
+    var x=d3.scale.linear()
+    	.domain([2006,2012])
+    	.range([0,width]);
+
+    var y = d3.scale.linear()
+    	.domain([0,1.05])
+    	.range([height-10,0]);
+
+    var colorrange = [
+    	"#8C1620", "#E34A33", "#cccccc", "#FDBB84", "#FDD49E", "#AEF0D9","#980043", "#DD1C77", "#DF65B0", "#C994C7", "#D4B9DA", "#AAEEF6"];
+    var color = d3.scale.ordinal().range(colorrange);
+
+    //data reading and processing
+    d3.csv("data/data_us.csv", function(data){
+
+    	var data=data;
+
+    	_.each(data,function(d) {
+    		d.date = +d.date;
+    		d.percent = +d.percent;
+    		d.value = +d.value;
+    	});
+		var nest = d3.nest()
+			.key(function(d) { return d.key; });
+
+		//do not use a stack function but write the stack function manually
+		    // var stack = d3.layout.stack()
+		    // 	.offset('zero');
+
+	    var dataModified = nest.entries(data);
+	    var years = [2012,2011,2010,2009,2008,2007,2006];
+		var values = _.pluck(dataModified,'values');
+    	var reGroupedArray = [];
+	    _.each(years,function(yr) {
+	    	var arrayPerYear = [];
+	    	_.each(values,function(layer) {
+	    		arrayPerYear.push(layer[years.indexOf(yr)]);
+	    	})
+	    	arrayPerYear.sort(function(a,b) {
+	    		return a.value - b.value;
+	    	});
+
+	    	var y0 = 0;
+	    	_.each(arrayPerYear,function(d,i) {
+	    		d.y0 = y0;
+	    		d.y= d.percent;
+	    		d.values = {'y0':d.y0, 'y':d.y,'date':d.date};
+	    		y0 += d.percent; // adding 1 for padding
+	    	});
+	    	reGroupedArray.push(arrayPerYear);
+	    });
+	    var layers = d3.nest()
+	    	.key(function(d) {return d.key;})
+	    	.entries(_.flatten(reGroupedArray));
+
+
+	    //start plotting
+	    var svg = d3.select("#streamarea").append("svg")
+		    .attr("width", width)
+		    .attr("height", height);
+
+	    var area = d3.svg.area()
+		    .interpolate("cardinal")
+	    	.x(function(d) {return x(d.date);})
+	    	.y0(function(d) {return y(d.y0);})
+	    	.y1(function(d) {return y(d.y0+d.y);});
+
+		//y.domain([0,d3.max(data, function(d) { return d.y0 + d.y; })]);
+
+	    var g = svg.selectAll('path')
+	    	.data(layers).enter().append('g')
+	    	.attr('class',function(d) {return 'layers '+ d.key;});
+	    	
+	    g.append('path')
+	    	.attr('d',function(d) {return area(d.values);})
+	    	.style('fill',function(d,i) {
+	    		return color(i);
+	    	})
+	    	.style('stroke','white')
+	    	.style('stroke-width','1.5px')
+	    	.style('fill-opacity','0.8')
+	    	// .append('title')
+	    	// .text(function(d) {return d.key;});
+
+	   	var tooltip = d3.select('#streamarea').append('div')
+	   		.attr('class','tooltip')
+	   		.style('display','none');
+	   	var years_num = years.map(Number);
+	   	
+	   	var tooltip_visible = false;
+
+	   	g.on('mouseenter',function(d) {
+	   		tooltip_visible = true;
+	   	})
+
+	   	g.on('mousemove',function(d) {
+	   		var m = d3.mouse(this),
+                yr = x.invert(m[0]),
+            	dist = years_num.map(function(y) { return Math.abs(y-yr); });
+                minpos = dist.indexOf(d3.min(dist)),
+                nYear = years_num[minpos];
+            var val = d.values.filter(function(v) { return v.date == nYear; })[0];
+
+	   		tooltip
+	   		.style('display','block')
+            .style('top', (m[1]+15)+'px')
+            .style('height',60)
+            .style('left', m[0]>width-180? (m[0]-160)+'px' : (m[0]+20))
+            .html('In '+nYear+', <b>'+Math.round(val.percent*100,-1) +
+                        '%</b> of Foreign students in the U.S. were from <b>' + d.key +'</b>.');
+
+           	this.parentNode.appendChild(this);
+
+	   	})
+
+	   	g.on('mouseleave',function(d) {
+	   		tooltip_visible = false;
+	   		_.debounce(function() {
+	   			if (tooltip_visible) return;
+	   			tooltip.style('display','none');
+	   		},100) ();
+	   	});
+
+
+	   	var ticks = svg.selectAll('.tick')
+            .data(years).enter()
+            .append('g')
+            .attr('class', 'tick')
+            .attr('transform', function(d) { return 'translate('+x(d)+',0)'; });
+
+        ticks.append('text')
+        	.attr('class','tick-text')
+        	.attr('x',0)
+//        	.attr('x',width/years.length/2)
+        	.style('text-anchor',function(d) {
+        		if (d==2006) return 'beginning';
+        		if (d==2012) return 'end';
+        		else return 'middle';
+        	})
+        	.attr('dy',15)
+        	.text(function(d) {return d;})
+
+		ticks.append("line")
+            .attr("class", "faint-axis-line x-axis-line")
+            .attr("y1", 20)
+            .attr("y2", function(d) { return height - 30; });
+
+
+
+
+
+
+}) //end d3.csv
+})
+</script>
+
+
+
+</head>
+
+<body>
+	<div id='area'>
+		<h2>Foreign Students in the U.S. by Country of Origin 2006-2012</h2>
+		<p><a href='index_cn.html'> See international students in China &rArr;</a></p>
+	</div>
+	<div id='streamarea'></div>
+	<div id='footer'>Source:Institute of International Education</div>
+		
+</body>
+</html>

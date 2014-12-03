@@ -1,0 +1,55 @@
+	body {font-family: sans-serif;}
+	h2 {
+		color:#333;
+		font-family: "Good OT";
+		font-weight: 300;
+		text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+		margin-bottom: 5px;
+	}
+	p {
+		padding:0px;
+		color:#999;
+		font-family: "Good OT";
+		margin-top: 0px;
+		font-size: 14px;
+	}
+	p a {
+		color:steelblue;
+		text-decoration: none;
+	}
+
+	.tick-text {
+		font-family: sans-serif;
+		color: #aaa;
+		fill:#aaa;
+		font-size: 12px;
+	}
+
+	#area {
+/*		background-color: #ccc;
+*/	}
+	.faint-axis-line {
+	  stroke: #000;
+	  opacity: .2;
+	  pointer-events: none;
+	}
+
+	.tooltip {
+	  font-family: sans-serif;
+	  pointer-events: none;
+	  position: absolute;
+	  width: 150px;
+	  padding: 10px;
+	  background: rgba(255,255,255,0.95);
+	  border: 1px solid #bbb;
+/*	  box-shadow: 1px 2px 3px rgba(0,0,0,.2);
+*/	  font-weight: 300;
+	  font-size: 13px;
+	  line-height: 16px;
+	  color:#333;
+	}
+
+	 #footer {
+	 	font-size: 14px;
+	 	color: #666;
+	 }
